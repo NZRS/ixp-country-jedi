@@ -103,7 +103,7 @@ def do_probe_selection( probes, conf, basedata ):
       prb_info = probes[prb_id]
       status = prb_info['status']
       ## down probes are not useful:
-      if status != 1:
+      if status['id'] != 1:
          continue
       ## probes with auto-geoloc have unreliable geolocation :( :( :(
       if 'tags' in prb_info and 'system-auto-geoip-country' in prb_info['tags']:
@@ -114,7 +114,8 @@ def do_probe_selection( probes, conf, basedata ):
       for loc in basedata['locations']:
          loclat = basedata['locations'][loc]['lat']
          loclon = basedata['locations'][loc]['lon']
-         dists[ loc ] = haversine_km( loclat, loclon, prb_info['latitude'], prb_info['longitude'] )
+         prb_lat, prb_lon = prb_info['geometry']['coordinates']
+         dists[ loc ] = haversine_km(loclat, loclon, prb_lat, prb_lon)
          if 'location-constraint' in basedata:
             if dists[ loc ] < basedata['location-constraint']:
                 loc_close_enough = True
@@ -202,8 +203,8 @@ def do_probe_selection( probes, conf, basedata ):
    for prb_id in selected_probes:
       outdata.append({
          'probe_id': prb_id,
-         'lat': probes[prb_id]['latitude'],
-         'lon': probes[prb_id]['longitude'],
+         'lat': probes[prb_id]['geometry']['coordinates'][0],
+         'lon': probes[prb_id]['geometry']['coordinates'][1],
          'asn_v4': probes[prb_id]['asn_v4'],
          'asn_v6': probes[prb_id]['asn_v6'],
          'dists': probes[prb_id]['dists'],
@@ -400,7 +401,7 @@ if __name__ == '__main__':
    else:
       basedata['countries'] = conf['country']
    # uppercase all
-   basedata['countries'] = map(lambda x:x.upper(), basedata['countries'])
+   basedata['countries'] = [x.upper() for x in basedata['countries']]
    ####
    # stats per country
    ####
