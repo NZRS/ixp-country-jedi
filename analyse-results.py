@@ -413,11 +413,11 @@ def do_probetags_printresult( data ):
    for p in PROBES:
       if 'tags' in p:
          for t in p['tags']:
-            if t.startswith('system-'):
-               t = t[7:]
-               tags['system'][ t ] += 1
+            if t['slug'].startswith('system-'):
+               tag_txt = t['slug'][7:]
+               tags['system'][tag_txt] += 1
             else:
-               tags['user'][ t ] += 1
+               tags['user'][t['slug']] += 1
    for tagtype in tags:
       for tag in sorted( tags[tagtype].keys() ):
          json_out[tagtype].append({'text': tag, 'count': tags[tagtype][tag]})
