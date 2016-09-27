@@ -59,6 +59,7 @@ city centre).
 ## prepare.py
 
 This script reads _config.json_ and generates two output files:
+
 1. basedata.json
 2. probeset.json
 
@@ -114,7 +115,7 @@ This script fetches measurements (from _measurementset.json_) and
 does some initial analysis on them using information from _config.json_,
 _basedata.json_, _probeset.json_ and _ips.json-fragments_.  It creates a
 local _results_ directory and outputs a single json file per
-measurement (_analysed.<msmid>.json_) which is a list of analysis
+measurement (_analysed.\<msmid\>.json_) which is a list of analysis
 results, one result per src/dst combination.
 
 ## analyse-results.py
