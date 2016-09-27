@@ -136,6 +136,11 @@ class IPInfoCache():
         self.ips[ip]['hostname'] = host
         return host
 
+    def updateCache(self, rec_list):
+        for rec in rec_list:
+            self.ips[rec['ip']] = dict((k, v) for k, v in rec.iteritems()
+                                       if k != 'ip')
+
     def toJsonFragments(self, outfilename):
         ''' print ipinfo cache to file as fragmented json, 1 entry per line '''
         with open(outfilename, 'w') as outf:
