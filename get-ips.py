@@ -6,14 +6,56 @@ from Atlas import MeasurementFetch,MeasurementPrint,IPInfoCache
 import json
 import ripe.atlas.sagan
 import requests
-import ipaddress
-import re
-#import random
+from progressbar import ProgressBar
+from multiprocessing import Pool
 
 ipinfo = {}
+ips = set()
+ipset_pbar = ProgressBar()
+ipset_res = []
+ip_info_pbar = ProgressBar()
+ip_info_res = []
+asns = set()
+ipcache = IPInfoCache.IPInfoCache()
 
 
-def get_asnmeta( asn ):
+def fetch_msm(msm_id):
+    unique_ips = set()
+    msm_data = MeasurementFetch.fetch(msm_id)
+    for data in msm_data:
+        tr = ripe.atlas.sagan.TracerouteResult(data)
+        for hop in tr.hops:
+            for pkt in hop.packets:
+                ip = pkt.origin
+                if pkt.arrived_late_by: ## these are 'weird' packets ignore ehm (better would be to filter out pkts with 'edst')
+                    continue
+                if ip is not None:
+                    unique_ips.add(ip)
+
+    return unique_ips
+
+
+def log_ip_set(ip_set):
+    ips.union(ip_set)
+    ipset_res.append(ip_set)
+    ipset_pbar.update(len(ipset_res))
+
+
+def find_ip_info(ip):
+    res = ipcache.findIPInfo(ip)
+    res.update({'ip': ip})
+
+    return res
+
+
+def log_ip_info_res(res):
+    ip_info_res.append(res)
+    ip_info_pbar.update(len(ip_info_res))
+    if 'asn' in res and res['asn'] is not None and res['asn'] != '':
+        asns.add(res['asn'])
+
+
+def get_asnmeta(asn):
     meta = {'asn': asn,
             'as_name': '<unknown>',
             'as_description': '<unknown>',
@@ -58,43 +100,40 @@ def get_asnmeta( asn ):
 
 
 def main():
-    ips = set()
     with open('measurementset.json', 'r') as infile:
         msms = json.load(infile)
         msm_list = msms['v4'] + msms['v6']
-        msm_idx = 0
-        while msm_idx < len(msm_list):
-            m = msm_list[msm_idx]
-            print >>sys.stderr, "(%d/%d) msm gathering, now fetching %s" % (
-                msm_idx+1, len(msm_list), m)
-            try:
-                msm_data = MeasurementFetch.fetch(m['msm_id'])
-                for data in msm_data:
-                    tr = ripe.atlas.sagan.TracerouteResult(data)
-                    for hop in tr.hops:
-                        for pkt in hop.packets:
-                            ip = pkt.origin
-                            if pkt.arrived_late_by: ## these are 'weird' packets ignore ehm (better would be to filter out pkts with 'edst')
-                                continue
-                            if ip is not None:
-                                ips.add( ip )
-                msm_idx += 1
-            except:
-                print "Error fetching msm %d, will retry" % m['msm_id']
+        ipset_pbar.start(max_value=len(msm_list))
+        ipset_pool = Pool(processes=4) # Fetch two measurements at a time
+        for msm in msm_list:
+            ipset_pool.apply_async(fetch_msm, args=(msm['msm_id'],),
+                                   callback=log_ip_set)
+        ipset_pool.close()
+        ipset_pool.join()
+        ipset_pbar.finish()
+
+    ips = set()
+    for partial_ips in ipset_res:
+        ips = ips.union(partial_ips)
 
     no_ips = len(ips)
+    ip_info_pool = Pool(processes=4)
+    ip_info_pbar.start(max_value=no_ips)
     print >>sys.stderr, "IP gathering finished, now analysing. IP count: %s" % ( no_ips )
-    ipcache = IPInfoCache.IPInfoCache()
-    counter = 1
-    ips = list(ips)
-    ips.sort()
-    asns = set()
-    for ip in ips:
-        res = ipcache.findIPInfo(ip)
-        print "(%d/%d) %s / %s" % ( counter, no_ips, ip, res )
-        counter += 1
-        if 'asn' in res and res['asn'] is not None and res['asn'] != '':
-            asns.add( res['asn'] )
+    for ip in list(ips):
+        ip_info_pool.apply_async(find_ip_info, args=(ip,),
+                                 callback=log_ip_info_res)
+
+    ip_info_pool.close()
+    ip_info_pool.join()
+    ip_info_pbar.finish()
+
+    # NOTE: As the ipcache is shared among multiple processes, the look ups
+    # are not save in their internal cache, but returned as messages to the
+    # main process. The list ip_info_res contains all the results, so we feed
+    #  those results into the internal cache to save them in the right format
+    # Load the internal cache with the results of the lookups
+    ipcache.updateCache(ip_info_res)
 
     # writes this file
     ipcache.toJsonFragments('ips.json-fragments')
