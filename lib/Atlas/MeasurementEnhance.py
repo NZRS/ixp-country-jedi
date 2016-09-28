@@ -171,6 +171,9 @@ def aslinksplus( data, teh_radix ):
          if len(this_hop_ases) == 1 and len(last_resp_hop_ases) == 1:
             this_asn = list(this_hop_ases)[0]
             last_asn = list(last_resp_hop_ases)[0]
+            # This is debug
+            if this_asn is None:
+               print("WARNING: wrong AS to the chain at hop %s" % ips)
             if this_asn != last_asn:
                link_type = 'd' #direct
                if this_resp_hop_nr - last_resp_hop_nr > 1:
