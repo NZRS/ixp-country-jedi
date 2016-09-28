@@ -16,11 +16,11 @@ PROBE_BLACKLIST_FILE="%s/probe-blacklist.txt" % BASEDIR
 
 # globally available
 PROBES = []
-with open('probeset.json','r') as probesin:
-   PROBES = json.load( probesin )
 PROBES_BY_ID = {}
-for p in PROBES:
-   PROBES_BY_ID[ p['probe_id'] ] = p
+with open('probeset.json','r') as probesin:
+    PROBES = json.load(probesin)
+    for p in PROBES:
+        PROBES_BY_ID[p['probe_id']] = p
 
 PROBE_BLACKLIST = set()
 if os.path.isfile( PROBE_BLACKLIST_FILE ):
@@ -375,15 +375,25 @@ def do_ixplans_printresult( data ):
       idx=0
       result = {'nodes': [], 'links': [], 'ixps': []}
       for n in data[proto]['nodes']:
-         lat = PROBES_BY_ID[ n ]['lat']
-         lon = PROBES_BY_ID[ n ]['lon']
-         asn = PROBES_BY_ID[ n ]['asn_%s' % ( proto ) ]
-         result['nodes'].append({'probe_id': n, 'asn': asn, 'lat': lat, 'lon': lon})
-         name2idx[ n ] = idx
-         idx += 1
+         try:
+             lat = PROBES_BY_ID[ n ]['lat']
+             lon = PROBES_BY_ID[ n ]['lon']
+             asn = PROBES_BY_ID[ n ]['asn_%s' % ( proto ) ]
+             result['nodes'].append({'probe_id': n,
+                                     'asn': asn,
+                                     'lat': lat,
+                                     'lon': lon})
+             name2idx[n] = idx
+             idx += 1
+         except KeyError as ex:
+            print("Missing element %s under %s" % (ex, n))
+            continue
       for l in data[proto]['links']:
-         src,dst,ixp = l.split('>',2)
-         result['links'].append({'source': name2idx[ int(src)], 'target': name2idx[ int(dst)], 'ixp': ixp})
+         src,dst,ixp = l.split('>', 2)
+         try:
+             result['links'].append({'source': name2idx[ int(src)], 'target': name2idx[ int(dst)], 'ixp': ixp})
+         except ValueError as e:
+             print("Link %s doesnt have the right format" % l)
       #for i in sorted( data[proto]['ixps'], key=lambda x:data[proto]['ixps'][x], reverse=True ):
       for i in sorted( data[proto]['ixps'], reverse=True ):
          result['ixps'].append( i )
