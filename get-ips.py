@@ -100,6 +100,7 @@ def get_asnmeta(asn):
 
 
 def main():
+    print >>sys.stderr, "Downloading measurements"
     with open('measurementset.json', 'r') as infile:
         msms = json.load(infile)
         msm_list = msms['v4'] + msms['v6']
@@ -117,7 +118,7 @@ def main():
         ips = ips.union(partial_ips)
 
     no_ips = len(ips)
-    ip_info_pool = Pool(processes=4)
+    ip_info_pool = Pool(processes=8)
     ip_info_pbar.start(max_value=no_ips)
     print >>sys.stderr, "IP gathering finished, now analysing. IP count: %s" % ( no_ips )
     for ip in list(ips):
