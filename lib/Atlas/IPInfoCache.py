@@ -53,8 +53,6 @@ class IPInfoCache():
         if not ip in self.ips:
             self.ips[ip] = {}
         try:
-            #gcontext = ssl.SSLContext(ssl.PROTOCOL_TLSv1)
-            #locinfo = urllib2.urlopen( "https://marmot.ripe.net/openipmap/ipmeta.json?ip=%s" % ( ip ), context=gcontext )
             loc_req = requests.get(
                 "https://marmot.ripe.net/openipmap/ipmeta.json",
                 params={'ip': ip}, verify=False)
