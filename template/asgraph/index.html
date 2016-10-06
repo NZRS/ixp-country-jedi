@@ -35,38 +35,143 @@
     <script src="../bower_components/d3-plugins/fisheye/fisheye.js"></script>
     <script src="../bower_components/jquery/dist/jquery.min.js"></script>
     <script src="../common/jedi-utils.js"></script>
-    <script type="text/javascript" src="../bower_components/alchemyjs/dist/scripts/vendor.js"></script>
-    <script type="text/javascript" src="../bower_components/alchemyjs/dist/alchemy.min.js"></script>
+    <script src="../bower_components/vis/dist/vis.min.js"></script>
+    <link rel="stylesheet" href="../bower_components/vis/dist/vis.min.css">
     <script>
-      var config = {
-          dataSource: "asgraph.json",
-          nodeCaptionsOnByDefault: true,
-          nodeTypes: {type: ["ixp", "asn"]},
-          nodeStyle: {
-             "ixp": {
-                "color"  : "#EE5511"
-             },
-             "asn": {
-                "color"  : "#EEEEFF"
-             }
-          },
-          nodeCaption: "name"
+      var network;
+      var datafile = 'asgraph.json';
+      // Variables around edge styling
+      var e_style = {
+        'd': {'dash': [],
+              'color': {'color': 'rgba(0,255,0,0.1)',
+                        'highlight': 'rgba(0,255,0,1.0)'},
+              'lbl': 'Direct'},
+        'i': {'dash': [4, 6],
+              'color': {'color': 'rgba(144,238,144,0.1)',
+                        'highlight': 'rgba(144,238,144,1.0)'},
+              'lbl': 'Indirect'}
       };
-      alchemy.begin( config );
+
+
+      $.getJSON(datafile, function(data, status) {
+        var nodes = [];
+        var edges = [];
+        var vis_nodes, vis_edges;
+
+        $.each(data['nodes'], function(i, entry) {
+          nodes.push({
+            'id': entry.id,
+            'label': entry.label,
+            'group': entry.group,
+            'value': entry.value
+          });
+        });
+
+        $.each(data['edges'], function(i, entry) {
+          edges.push({
+            'to': entry.to,
+            'from': entry.from,
+            'class': entry.type,
+            'value': entry.value,
+            'dashes': e_style[entry.type]['dash'],
+            'color': e_style[entry.type]['color']
+          });
+        });
+
+        drawNetwork();
+
+        function drawNetwork() {
+          var container = document.getElementById('aspath_vis');
+          vis_nodes = new vis.DataSet(nodes);
+          vis_edges = new vis.DataSet(edges);
+
+          var vis_options = {
+            autoResize: true,
+            width: '100%',
+            height: '100%',
+            layout: {
+              randomSeed: 42,
+              improvedLayout: false
+            },
+            nodes: {
+              shape: 'dot',
+              size: 20,
+              physics: true,
+              borderWidth: 0.5,
+              font: {
+                color: 'white',
+                size: 10
+              }
+            },
+            edges: {
+              width: 1.5,
+              smooth: false,
+              color: {
+                color: 'rgba(211,211,211,0.1)',
+                highlight: 'rgba(211,211,211,0.6)'
+              }
+            },
+            groups: {
+              asn: {
+                color: {
+                  background: 'rgba(255,255,0,0.8)',
+                  border: 'white',
+                  highlight: {
+                    background: 'rgba(255,255,0,1.0)',
+                    border: 'white'
+                  }
+                }
+              },
+              ixp: {
+                color: {
+                  background: 'rgba(255,0,64,0.8)',
+                  border: 'pink',
+                  highlight: {
+                    background: 'rgba(255,0,64,1.0)',
+                    border: 'pink'
+                  }
+                }
+              }
+            },
+            interaction: {
+              dragNodes: false,
+              hideEdgesOnDrag: true,
+              keyboard: false
+            },
+            physics: {
+                "barnesHut": {
+                  "gravitationalConstant": -7000,
+                  "centralGravity": 2.0,
+                  "springLength": 175,
+                  "springConstant": 0.065,
+                  "damping": 0.22,
+                  "avoidOverlap": 0.9
+                },
+                "maxVelocity": 90,
+                "minVelocity": 4,
+                "timestep": 0.15
+            }
+          };
+
+          var network_data = {nodes: vis_nodes, edges: vis_edges};
+          network = new vis.Network(container, network_data, vis_options);
+        }
+      });
     </script>
 
     <style>
-
-      .node {
-        stroke: #fff;
-        stroke-width: 1.5px;
-      }
-
-      .link {
-        stroke: #999;
-        stroke-opacity: .6;
-      }
-
+        #aspath_vis {
+            background: black;
+            height: 100%;
+            padding-top: 50px;
+        }
+        #config {
+            width: 100%;
+            height: 300px;
+        }
+        html, body {
+            height: 100%;
+        }
     </style>
 
     <nav class="navbar navbar-inverse navbar-fixed-top">
@@ -98,8 +203,6 @@
   </head>
 
   <body>
-  
-    <div id="alchemy" class="alchemy"></div>
-
+    <div id="aspath_vis"></div>
   </body>
 </html>

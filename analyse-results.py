@@ -308,11 +308,17 @@ def do_asgraph_printresult( d ):
       if n.startswith('_'):
          typ = 'ixp'
          n = n.lstrip('_');
-      result['nodes'].append({'id': idx, 'name': n, 'type': typ, 'count': count })
+      result['nodes'].append({'id': idx,
+                              'label': n,
+                              'group': typ,
+                              'count': count})
       idx += 1
+
    for l in d['links']:
       src,dst,typ = l.split('>',2)
-      result['edges'].append({'source': name2idx[src], 'target': name2idx[dst], 'type': typ})
+      result['edges'].append({'from': name2idx[src],
+                              'to': name2idx[dst],
+                              'type': typ})
    with open('%s/asgraph.json' % ( VIZPATH), 'w') as outfile:
       json.dump( result , outfile )
    print "ASGRAPH viz results in '%s'" % ( VIZPATH )
@@ -375,6 +381,8 @@ def do_ixplans_printresult( data ):
       idx=0
       result = {'nodes': [], 'links': [], 'ixps': []}
       for n in data[proto]['nodes']:
+         if n is None:
+             continue
          lat = PROBES_BY_ID[ n ]['lat']
          lon = PROBES_BY_ID[ n ]['lon']
          asn = PROBES_BY_ID[ n ]['asn_%s' % ( proto ) ]
@@ -383,7 +391,10 @@ def do_ixplans_printresult( data ):
          idx += 1
       for l in data[proto]['links']:
          src,dst,ixp = l.split('>',2)
-         result['links'].append({'source': name2idx[ int(src)], 'target': name2idx[ int(dst)], 'ixp': ixp})
+         try:
+            result['links'].append({'source': name2idx[ int(src)], 'target': name2idx[ int(dst)], 'ixp': ixp})
+         except ValueError:
+            print("ERROR: Link %s doesnt have the right format" % l)
       #for i in sorted( data[proto]['ixps'], key=lambda x:data[proto]['ixps'][x], reverse=True ):
       for i in sorted( data[proto]['ixps'], reverse=True ):
          result['ixps'].append( i )
@@ -413,11 +424,10 @@ def do_probetags_printresult( data ):
    for p in PROBES:
       if 'tags' in p:
          for t in p['tags']:
-            if t.startswith('system-'):
-               t = t[7:]
-               tags['system'][ t ] += 1
+            if t['slug'].startswith('system-'):
+               tags['system'][ t['slug'][7:] ] += 1
             else:
-               tags['user'][ t ] += 1
+               tags['user'][ t['slug'] ] += 1
    for tagtype in tags:
       for tag in sorted( tags[tagtype].keys() ):
          json_out[tagtype].append({'text': tag, 'count': tags[tagtype][tag]})

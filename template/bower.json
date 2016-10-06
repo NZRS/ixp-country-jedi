@@ -17,8 +17,7 @@
     "colorbrewer": "~1.0.0",
     "jquery": "~2.1.3",
     "oboe": "~2.0.2",
-    "alchemy": "~0.0.5",
-    "alchemyjs": "~0.4.2"
+    "vis": "~4.16.1"
   },
   "homepage": "https://github.com/emileaben/ixp-country-jedi",
   "moduleType": [
